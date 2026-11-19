@@ -151,3 +151,18 @@ export const logger = winston.createLogger({
 export function getRequestLogger(requestId: string): winston.Logger {
   return logger.child({ requestId });
 }
+
+/**
+ * Dedicated logger for rate-limit rejections so they can be monitored
+ * independently of general application logs.
+ */
+export function logRateLimitRejection(details: {
+  clientId: string;
+  ip: string;
+  method: string;
+  path: string;
+  limit: number;
+  windowMs: number;
+}): void {
+  logger.warn("rate_limit_exceeded", { event: "rate_limit_exceeded", ...details });
+}

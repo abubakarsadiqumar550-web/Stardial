@@ -6,6 +6,15 @@ const stellarContractIdSchema = z
   .min(1, "CONTRACT_ID must not be empty - deploy the Soroban contract first")
   .regex(/^C[A-Z2-7]{55}$/, "CONTRACT_ID must be a valid Stellar contract address");
 
+const positiveIntString = (name: string) =>
+  z
+    .string()
+    .optional()
+    .refine(
+      (val) => val === undefined || (Number.isInteger(Number(val)) && Number(val) > 0),
+      `${name} must be a positive integer`,
+    );
+
 const backendEnvSchema = z.object({
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
 
@@ -31,10 +40,10 @@ const backendEnvSchema = z.object({
     .optional()
     .default("true"),
 
-    LOG_SCRUB_WALLET_ADDRESSES: z
-  .enum(["true", "false"])
-  .optional()
-  .default(process.env.NODE_ENV === "production" ? "true" : "false"),
+  LOG_SCRUB_WALLET_ADDRESSES: z
+    .enum(["true", "false"])
+    .optional()
+    .default(process.env.NODE_ENV === "production" ? "true" : "false"),
 
   PAYMENTS_ADMIN_API_KEY: z.string().optional(),
   PAYMENTS_ADMIN_WRITE_ENABLED: z
@@ -74,49 +83,23 @@ const backendEnvSchema = z.object({
     .string()
     .min(1, "SIMULATOR_ACCOUNT must not be empty"),
 
-  RATE_LIMIT_WINDOW_MS: z.string().optional(),
-  RATE_LIMIT_MAX: z.string().optional(),
+  RATE_LIMIT_WINDOW_MS: positiveIntString("RATE_LIMIT_WINDOW_MS"),
+  RATE_LIMIT_MAX: positiveIntString("RATE_LIMIT_MAX"),
+  // Per-endpoint overrides, optional. Fall back to RATE_LIMIT_WINDOW_MS / RATE_LIMIT_MAX.
+  RATE_LIMIT_WRITE_MAX: positiveIntString("RATE_LIMIT_WRITE_MAX"),
+  RATE_LIMIT_READ_MAX: positiveIntString("RATE_LIMIT_READ_MAX"),
+  RATE_LIMIT_LOG_REJECTIONS: z
+    .enum(["true", "false"])
+    .optional()
+    .default("true"),
+
   SHUTDOWN_FORCE_TIMEOUT_MS: z.string().optional(),
 
-  READ_CACHE_TTL_MS: z
-    .string()
-    .optional()
-    .refine(
-      (val) => val === undefined || (Number.isInteger(Number(val)) && Number(val) > 0),
-      "READ_CACHE_TTL_MS must be a positive integer",
-    ),
-
-  READ_CACHE_MAX_ENTRIES: z
-    .string()
-    .optional()
-    .refine(
-      (val) => val === undefined || (Number.isInteger(Number(val)) && Number(val) > 0),
-      "READ_CACHE_MAX_ENTRIES must be a positive integer",
-    ),
-
-  DATABASE_POOL_MAX: z
-    .string()
-    .optional()
-    .refine(
-      (val) => val === undefined || (Number.isInteger(Number(val)) && Number(val) > 0),
-      "DATABASE_POOL_MAX must be a positive integer",
-    ),
-
-  DATABASE_POOL_IDLE_MS: z
-    .string()
-    .optional()
-    .refine(
-      (val) => val === undefined || (Number.isInteger(Number(val)) && Number(val) > 0),
-      "DATABASE_POOL_IDLE_MS must be a positive integer",
-    ),
-
-  DATABASE_POOL_CONN_TIMEOUT_MS: z
-    .string()
-    .optional()
-    .refine(
-      (val) => val === undefined || (Number.isInteger(Number(val)) && Number(val) > 0),
-      "DATABASE_POOL_CONN_TIMEOUT_MS must be a positive integer",
-    ),
+  READ_CACHE_TTL_MS: positiveIntString("READ_CACHE_TTL_MS"),
+  READ_CACHE_MAX_ENTRIES: positiveIntString("READ_CACHE_MAX_ENTRIES"),
+  DATABASE_POOL_MAX: positiveIntString("DATABASE_POOL_MAX"),
+  DATABASE_POOL_IDLE_MS: positiveIntString("DATABASE_POOL_IDLE_MS"),
+  DATABASE_POOL_CONN_TIMEOUT_MS: positiveIntString("DATABASE_POOL_CONN_TIMEOUT_MS"),
 
   MAINNET_CONTRACT_ID: stellarContractIdSchema.optional(),
 
@@ -239,6 +222,11 @@ export function printEnvDiagnostics(): void {
     { key: "SIMULATOR_ACCOUNT", required: true },
     { key: "MAINNET_CONTRACT_ID", required: false },
     { key: "RENDER_BACKEND_DEPLOY_HOOK_URL", required: false },
+    { key: "RATE_LIMIT_WINDOW_MS", required: false },
+    { key: "RATE_LIMIT_MAX", required: false },
+    { key: "RATE_LIMIT_WRITE_MAX", required: false },
+    { key: "RATE_LIMIT_READ_MAX", required: false },
+    { key: "RATE_LIMIT_LOG_REJECTIONS", required: false },
     { key: "DATABASE_POOL_MAX", required: false },
     { key: "DATABASE_POOL_IDLE_MS", required: false },
     { key: "DATABASE_POOL_CONN_TIMEOUT_MS", required: false },

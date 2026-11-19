@@ -98,6 +98,21 @@ app.use(requestTimeout());
 
 app.use(globalLimiter);
 
+// Per-endpoint limits are applied below; log all rejected (429) requests for monitoring.
+app.use((_req, res, next) => {
+  res.on("finish", () => {
+    if (res.statusCode === 429) {
+      logger.warn("Rate limit rejected request", {
+        method: _req.method,
+        path: _req.originalUrl,
+        ip: _req.ip,
+        requestId: res.locals.requestId ?? _req.header("x-request-id") ?? "-",
+      });
+    }
+  });
+  next();
+});
+
 app.use("/docs", (_req, res, next) => {
   res.setHeader(
     "Content-Security-Policy",
